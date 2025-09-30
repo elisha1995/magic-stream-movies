@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	controller "github.com/elisha1995/magic-stream-movies/server/controller"
+	"github.com/elisha1995/magic-stream-movies/server/controller"
 )
 
 func main() {
@@ -17,8 +17,8 @@ func main() {
 	})
 
 	router.GET("/movies", controller.GetMovies())
-	router.GET("/movie/:imdb_id", controller.GetMovie())
-	router.POST("/movie", controller.AddMovie())
+	router.GET("/movies/:imdb_id", controller.GetMovie())
+	router.POST("/movies", controller.AddMovie())
 
 	if err := router.Run(":8080"); err != nil {
 		fmt.Println("Failed to start server: ", err)

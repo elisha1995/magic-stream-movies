@@ -2,3 +2,4 @@
 /.qodo
 /server/.DS_Store
 server/.idea/vcs.xml
+server/.env

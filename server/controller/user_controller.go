@@ -7,6 +7,7 @@ import (
 
 	"github.com/elisha1995/magic-stream-movies/server/database"
 	"github.com/elisha1995/magic-stream-movies/server/model"
+	"github.com/elisha1995/magic-stream-movies/server/util"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -72,6 +73,81 @@ func RegisterUser() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusCreated, result)
+
+	}
+}
+
+func LoginUser() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var userLogin model.UserLogin
+
+		if err := c.ShouldBindJSON(&userLogin); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input data"})
+			return
+		}
+
+		var ctx, cancel = context.WithTimeout(c, 100*time.Second)
+		defer cancel()
+
+		var userCollection = database.OpenCollection("users")
+
+		var foundUser model.User
+		err := userCollection.FindOne(ctx, bson.D{{Key: "email", Value: userLogin.Email}}).Decode(&foundUser)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+			return
+		}
+
+		err = bcrypt.CompareHashAndPassword([]byte(foundUser.Password), []byte(userLogin.Password))
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+			return
+		}
+
+		token, refreshToken, err := util.GenerateAllTokens(foundUser.Email, foundUser.FirstName, foundUser.LastName, foundUser.Role, foundUser.UserID)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
+			return
+		}
+
+		err = util.UpdateAllTokens(foundUser.UserID, token, refreshToken)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tokens"})
+			return
+		}
+		/*http.SetCookie(c.Writer, &http.Cookie{
+			Name:  "access_token",
+			Value: token,
+			Path:  "/",
+			// Domain:   "localhost",
+			MaxAge:   86400,
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteNoneMode,
+		})
+		http.SetCookie(c.Writer, &http.Cookie{
+			Name:  "refresh_token",
+			Value: refreshToken,
+			Path:  "/",
+			// Domain:   "localhost",
+			MaxAge:   604800,
+			Secure:   true,
+			HttpOnly: true,
+			SameSite: http.SameSiteNoneMode,
+		})*/
+
+		c.JSON(http.StatusOK, model.UserResponse{
+			UserId:          foundUser.UserID,
+			FirstName:       foundUser.FirstName,
+			LastName:        foundUser.LastName,
+			Email:           foundUser.Email,
+			Role:            foundUser.Role,
+			Token:           token,
+			RefreshToken:    refreshToken,
+			FavouriteGenres: foundUser.FavouriteGenres,
+		})
 
 	}
 }

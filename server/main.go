@@ -20,6 +20,7 @@ func main() {
 	router.GET("/movies/:imdb_id", controller.GetMovie())
 	router.POST("/movies", controller.AddMovie())
 	router.POST("/register", controller.RegisterUser())
+	router.POST("/login", controller.LoginUser())
 
 	if err := router.Run(":8080"); err != nil {
 		fmt.Println("Failed to start server: ", err)

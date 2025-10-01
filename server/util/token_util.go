@@ -2,10 +2,12 @@ package util
 
 import (
 	"context"
+	"errors"
 	"os"
 	"time"
 
 	"github.com/elisha1995/magic-stream-movies/server/database"
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -113,4 +115,97 @@ func UpdateAllTokens(userId, token, refreshToken string) (err error) {
 		return err
 	}
 	return nil
+}
+
+func GetAccessToken(c *gin.Context) (string, error) {
+	authHeader := c.Request.Header.Get("Authorization")
+	if authHeader == "" {
+		return "", errors.New("authorization header is required")
+	}
+	tokenString := authHeader[len("Bearer "):]
+
+	if tokenString == "" {
+		return "", errors.New("bearer token is required")
+	}
+
+	return tokenString, nil
+
+}
+
+func ValidateToken(tokenString string) (*SignedDetails, error) {
+	claims := &SignedDetails{}
+
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(SecretKey), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		return nil, err
+	}
+
+	if claims.ExpiresAt.Time.Before(time.Now()) {
+		return nil, errors.New("token has expired")
+	}
+
+	return claims, nil
+
+}
+
+func GetUserIdFromContext(c *gin.Context) (string, error) {
+	userId, exists := c.Get("userId")
+
+	if !exists {
+		return "", errors.New("userId does not exists in this context")
+	}
+
+	id, ok := userId.(string)
+
+	if !ok {
+		return "", errors.New("unable to retrieve userId")
+	}
+
+	return id, nil
+
+}
+
+func GetRoleFromContext(c *gin.Context) (string, error) {
+	role, exists := c.Get("role")
+
+	if !exists {
+		return "", errors.New("role does not exists in this context")
+	}
+
+	memberRole, ok := role.(string)
+
+	if !ok {
+		return "", errors.New("unable to retrieve userId")
+	}
+
+	return memberRole, nil
+
+}
+
+func ValidateRefreshToken(tokenString string) (*SignedDetails, error) {
+	claims := &SignedDetails{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+
+		return []byte(SecretRefreshKey), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		return nil, err
+	}
+
+	if claims.ExpiresAt.Time.Before(time.Now()) {
+		return nil, errors.New("refresh token has expired")
+	}
+
+	return claims, nil
 }

@@ -15,7 +15,7 @@ const Recommended = () => {
       setMessage("");
 
       try {
-        const response = await axiosPrivate.get("/recommendedmovies");
+        const response = await axiosPrivate.get("/recommended-movies");
         setMovies(response.data);
       } catch (error) {
         console.error("Error fetching recommended movies:", error);

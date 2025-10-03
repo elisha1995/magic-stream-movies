@@ -19,7 +19,7 @@ const Review = () => {
     const fetchMovie = async () => {
       setLoading(true);
       try {
-        const response = await axiosPrivate.get(`/movie/${imdb_id}`);
+        const response = await axiosPrivate.get(`/movies/${imdb_id}`);
         setMovie(response.data);
         console.log(response.data);
       } catch (error) {
@@ -37,7 +37,7 @@ const Review = () => {
 
     setLoading(true);
     try {
-      const response = await axiosPrivate.patch(`/updatereview/${imdb_id}`, {
+      const response = await axiosPrivate.patch(`/update-review/${imdb_id}`, {
         admin_review: revText.current.value,
       });
       console.log(response.data);

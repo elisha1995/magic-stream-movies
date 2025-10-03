@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -23,7 +24,7 @@ func HashPassword(password string) (string, error) {
 	return string(HashPassword), nil
 }
 
-func RegisterUser() gin.HandlerFunc {
+func RegisterUser(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var user model.User
 
@@ -48,7 +49,7 @@ func RegisterUser() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(c, 100*time.Second)
 		defer cancel()
 
-		var userCollection = database.OpenCollection("users")
+		var userCollection = database.OpenCollection("users", client)
 
 		count, err := userCollection.CountDocuments(ctx, bson.D{{Key: "email", Value: user.Email}})
 
@@ -77,7 +78,7 @@ func RegisterUser() gin.HandlerFunc {
 	}
 }
 
-func LoginUser() gin.HandlerFunc {
+func LoginUser(client *mongo.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var userLogin model.UserLogin
 
@@ -89,7 +90,7 @@ func LoginUser() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(c, 100*time.Second)
 		defer cancel()
 
-		var userCollection = database.OpenCollection("users")
+		var userCollection = database.OpenCollection("users", client)
 
 		var foundUser model.User
 		err := userCollection.FindOne(ctx, bson.D{{Key: "email", Value: userLogin.Email}}).Decode(&foundUser)
@@ -111,7 +112,7 @@ func LoginUser() gin.HandlerFunc {
 			return
 		}
 
-		err = util.UpdateAllTokens(foundUser.UserID, token, refreshToken)
+		err = util.UpdateAllTokens(foundUser.UserID, token, refreshToken, client)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tokens"})

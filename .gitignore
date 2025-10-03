@@ -4,3 +4,4 @@
 server/.idea/vcs.xml
 server/.env
 server/.idea/material_theme_project_new.xml
+client/.env

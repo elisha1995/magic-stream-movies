@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type SignedDetails struct {
@@ -93,7 +94,7 @@ func GenerateAllTokens(email, firstName, lastName, role, userId string) (string,
 //
 // If there is an error during the update operation, the function returns the error. Otherwise, the
 // function returns nil.
-func UpdateAllTokens(userId, token, refreshToken string) (err error) {
+func UpdateAllTokens(userId, token, refreshToken string, client *mongo.Client) (err error) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
@@ -107,7 +108,7 @@ func UpdateAllTokens(userId, token, refreshToken string) (err error) {
 		},
 	}
 
-	var userCollection = database.OpenCollection("users")
+	var userCollection = database.OpenCollection("users", client)
 
 	_, err = userCollection.UpdateOne(ctx, bson.M{"user_id": userId}, updateData)
 
@@ -154,6 +155,14 @@ func ValidateToken(tokenString string) (*SignedDetails, error) {
 
 }
 
+// GetUserIdFromContext retrieves the user ID from the Gin context.
+//
+// The function returns the user ID as a string if it is found in the context.
+// If the user ID is not found in the context, the function returns an empty string
+// and an error indicating that the user ID does not exist in the context.
+//
+// If the user ID found in the context is not a string, the function returns an empty string
+// and an error indicating that the user ID is not a string.
 func GetUserIdFromContext(c *gin.Context) (string, error) {
 	userId, exists := c.Get("userId")
 
